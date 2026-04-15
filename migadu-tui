@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # migadu-tui — Migadu CLI TUI Manager
 # author: greedy
-# version: 0.1.2
+# version: 1.0.0
 
 import os
 import sys
