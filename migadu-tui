@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 # migadu-tui — Migadu CLI TUI Manager
 # author: greedy
-# version: 1.0.0
+# version: 1.1.0
 
-import os
 import sys
-import json
 import configparser
 from pathlib import Path
 import requests
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Tuple, Any
 import curses
 from curses import wrapper
-from datetime import datetime
 
 # CONFIGURATION variables
 CONFIG_DIR = Path.home() / ".config" / "migaducli"  # Directory for configuration files
@@ -75,7 +72,7 @@ def save_config(config: configparser.ConfigParser) -> None:
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
 
-def get_api_credentials() -> tuple[str, str]:
+def get_api_credentials() -> Tuple[str, str]:
     config = load_config()
     if not config.has_section('credentials'):
         die("No credentials found. Please run 'migadu-tui --setup' first.")
@@ -120,7 +117,7 @@ class MigaduAPI:
                 
         except requests.exceptions.RequestException as e:
             log_error(f"API request failed: {e}")
-            if hasattr(e.response, 'text'):
+            if e.response is not None:
                 log_error(f"Response: {e.response.text[:200]}")
             raise
     
@@ -323,6 +320,8 @@ class MigaduTUI:
             elif key == ord('r') or key == ord('R'):
                 try:
                     self.domains = api.get_domains()
+                    if selected_idx >= len(self.domains):
+                        selected_idx = max(0, len(self.domains) - 1)
                 except Exception as e:
                     try:
                         self.show_error(f"Refresh failed: {e}")
@@ -400,13 +399,19 @@ class MigaduTUI:
             elif key == ord('c') or key == ord('C'):
                 self.create_mailbox(api, domain_name)
                 mailboxes = api.get_mailboxes(domain_name)
-            elif key == ord('e') or key == ord('E') and mailboxes:
+                if selected_idx >= len(mailboxes):
+                    selected_idx = max(0, len(mailboxes) - 1)
+            elif mailboxes and key in (ord('e'), ord('E')):
                 self.edit_mailbox(api, domain_name, mailboxes[selected_idx])
                 mailboxes = api.get_mailboxes(domain_name)
-            elif key == ord('d') or key == ord('D') and mailboxes:
+                if selected_idx >= len(mailboxes):
+                    selected_idx = max(0, len(mailboxes) - 1)
+            elif mailboxes and key in (ord('d'), ord('D')):
                 self.delete_mailbox(api, domain_name, mailboxes[selected_idx])
                 mailboxes = api.get_mailboxes(domain_name)
-            elif key == ord('p') or key == ord('P') and mailboxes:
+                if selected_idx >= len(mailboxes):
+                    selected_idx = max(0, len(mailboxes) - 1)
+            elif mailboxes and key in (ord('p'), ord('P')):
                 self.reset_password(api, domain_name, mailboxes[selected_idx])
     
     def create_mailbox(self, api: MigaduAPI, domain_name: str):
@@ -443,13 +448,16 @@ class MigaduTUI:
         
         self.stdscr.move(start_y + 4, start_x + 19)
         name = self.stdscr.getstr().decode('utf-8').strip()
+        curses.noecho()
         
         self.stdscr.move(start_y + 5, start_x + 15)
         password = self.stdscr.getstr().decode('utf-8').strip()
-        curses.noecho()
         
         if not local_part:
-            self.show_message("Local part is required")
+            return
+
+        if not password:
+            self.show_message("Password is required")
             return
         
         # Create mailbox
@@ -500,10 +508,10 @@ class MigaduTUI:
         curses.echo()
         self.stdscr.move(start_y + 4, start_x + 15)
         new_name = self.stdscr.getstr().decode('utf-8').strip()
+        curses.noecho()
         
         self.stdscr.move(start_y + 6, start_x + 48)
         new_password = self.stdscr.getstr().decode('utf-8').strip()
-        curses.noecho()
         
         # Update mailbox
         try:
@@ -573,10 +581,9 @@ class MigaduTUI:
         self.stdscr.attroff(curses.color_pair(1))
         
         # Get input
-        curses.echo()
+        curses.noecho()
         self.stdscr.move(start_y + 3, start_x + 18)
         new_password = self.stdscr.getstr().decode('utf-8').strip()
-        curses.noecho()
         
         if not new_password:
             self.show_message("Password cannot be empty")
@@ -654,7 +661,7 @@ def setup_config():
     log_success("Configuration saved successfully!")
 
 def show_help():
-    show_header("Migadu CLI TUI Manager v0.1.2")
+    show_header("Migadu CLI TUI Manager v1.1.0")
     
     print(f"{Colors.CYAN}Usage:{Colors.NC}")
     print(f"  {Colors.WHITE}migadu-tui [OPTIONS]{Colors.NC}")
@@ -714,7 +721,7 @@ def main():
         if arg in ['--help', '-h']:
             show_help()
         elif arg in ['--version', '-v']:
-            print("Migadu CLI TUI Manager v0.1.2")
+            print("Migadu CLI TUI Manager v1.1.0")
         elif arg == '--setup':
             setup_config()
         else:

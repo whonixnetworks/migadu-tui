@@ -10,6 +10,7 @@ A terminal user interface (TUI) for managing Migadu email hosting.
 - View domain details and status
 - Manage mailboxes (create, edit, delete, view)
 - Reset mailbox passwords
+- Masked password input (passwords hidden during entry)
 - Simple configuration setup
 
 ## Installation
@@ -76,10 +77,21 @@ The tool uses the official Migadu API:
 
 - `migadu-tui`: Main executable script
 - `requirements.txt`: Python dependencies
-- `api-docs.md`: Migadu API documentation
-- `project.md`: Project ideas and goals
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.9+
 - `requests` library
+
+## Changelog
+
+### v1.1.0
+- Fixed critical operator precedence bug causing edit/delete/password to ignore empty mailbox guard
+- Fixed version mismatch across header, help, and --version output
+- Removed unused imports (`json`, `datetime`, `os`, `Optional`)
+- Fixed `tuple[str, str]` type hint to use `Tuple[str, str]` for broader Python compatibility
+- Fixed `RequestException.response` None check
+- Password fields now use `curses.noecho()` to hide input
+- Added `selected_idx` bounds clamping after list refresh and mutations
+- Added password required validation on mailbox creation
+- Added `.gitignore` and removed `node_modules/`, `dist/`, `package-lock.json` from tracking
